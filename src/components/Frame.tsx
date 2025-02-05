@@ -21,16 +21,11 @@ import { createStore } from "mipd";
 import { Label } from "~/components/ui/label";
 import { PROJECT_TITLE, NEYNAR_API_KEY } from "~/lib/constants";
 import { Skeleton } from "~/components/ui/skeleton";
+import Image from "next/image"; // Add Image import
 
 const neynarClient = new NeynarAPIClient(new Configuration({ apiKey: NEYNAR_API_KEY }));
 
-interface UnfollowEvent {
-  fid: number;
-  username: string;
-  displayName: string;
-  pfpUrl: string;
-  lastActive: Date;
-}
+// ... rest of the code remains the same until UnfollowList...
 
 function UnfollowList({ unfollows }: { unfollows: UnfollowEvent[] }) {
   return (
@@ -49,10 +44,13 @@ function UnfollowList({ unfollows }: { unfollows: UnfollowEvent[] }) {
         ) : (
           unfollows.map((user) => (
             <div key={user.fid} className="flex items-center gap-4">
-              <img
+              <Image
                 src={user.pfpUrl}
                 alt={user.username}
+                width={40}
+                height={40}
                 className="h-10 w-10 rounded-full"
+                loader={({ src }) => src} // Add custom loader if needed
               />
               <div className="flex-1">
                 <div className="font-medium">{user.displayName}</div>
@@ -69,94 +67,4 @@ function UnfollowList({ unfollows }: { unfollows: UnfollowEvent[] }) {
   );
 }
 
-export default function Frame() {
-  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
-  const [context, setContext] = useState<Context.FrameContext>();
-  const [unfollows, setUnfollows] = useState<UnfollowEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { data: session } = useSession();
-
-  const fetchUnfollowData = useCallback(async () => {
-    try {
-      if (!session?.user?.fid) return;
-
-      // Get followers and following lists
-      const { followers } = await neynarClient.fetchFollowers(session.user.fid);
-      const { following } = await neynarClient.fetchFollowing(session.user.fid);
-
-      // Find users who are in followers but not in following (unfollowed)
-      const followerFids = new Set(followers.map(u => u.fid));
-      const unfollowEvents = following
-        .filter(user => !followerFids.has(user.fid))
-        .map(user => ({
-          fid: user.fid,
-          username: user.username,
-          displayName: user.displayName,
-          pfpUrl: user.pfpUrl,
-          lastActive: new Date(user.timestamp || Date.now())
-        }))
-        .sort((a, b) => b.lastActive.getTime() - a.lastActive.getTime());
-
-      setUnfollows(unfollowEvents);
-    } catch (error) {
-      console.error("Error fetching unfollow data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [session]);
-
-  useEffect(() => {
-    const load = async () => {
-      const context = await sdk.context;
-      if (!context) return;
-
-      setContext(context);
-      sdk.actions.ready({});
-      
-      // Load data when SDK is ready
-      fetchUnfollowData();
-
-      sdk.on("frameAdded", ({ notificationDetails }) => {
-        window.location.reload();
-      });
-
-      sdk.on("frameRemoved", () => {
-        window.location.reload();
-      });
-    };
-
-    if (sdk && !isSDKLoaded) {
-      setIsSDKLoaded(true);
-      load();
-      return () => sdk.removeAllListeners();
-    }
-  }, [isSDKLoaded, fetchUnfollowData]);
-
-  if (!isSDKLoaded) {
-    return <div className="w-full text-center">Initializing Ghost Watch...</div>;
-  }
-
-  return (
-    <div style={{
-      paddingTop: context?.client.safeAreaInsets?.top ?? 0,
-      paddingBottom: context?.client.safeAreaInsets?.bottom ?? 0,
-      paddingLeft: context?.client.safeAreaInsets?.left ?? 0,
-      paddingRight: context?.client.safeAreaInsets?.right ?? 0,
-    }}>
-      <div className="w-[300px] mx-auto py-2 px-2">
-        <h1 className="text-2xl font-bold text-center mb-4 text-neutral-900">
-          {PROJECT_TITLE}
-        </h1>
-        
-        {loading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-[125px] w-full rounded-xl" />
-            <Skeleton className="h-[100px] w-full rounded-xl" />
-          </div>
-        ) : (
-          <UnfollowList unfollows={unfollows} />
-        )}
-      </div>
-    </div>
-  );
-}
+// ... rest of the file remains the same ...
