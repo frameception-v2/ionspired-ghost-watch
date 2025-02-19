@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-const Frame = dynamic(() => import("~/components/Frame").then(mod => mod.default), {
+const Frame = dynamic(() => import("~/components/Frame"), {
   ssr: false,
 });
 

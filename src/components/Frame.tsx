@@ -6,6 +6,8 @@ import sdk, {
   SignIn as SignInCore,
   type Context,
 } from "@farcaster/frame-sdk";
+
+export default function Frame() {
 import {
   Card,
   CardHeader,
